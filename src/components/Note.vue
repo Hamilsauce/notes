@@ -40,6 +40,7 @@ export default {
 		getUserInput(e) {
 			let input = e.target.textContent;
 			console.log(e.target.textContent);
+			this.modifiedNote.date = new Date().toLocaleString();
 			if (e.target.classList.contains("note-title")) {
 				this.modifiedNote.title = input;
 			} else if (e.target.classList.contains("note-content")) {
