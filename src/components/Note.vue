@@ -1,11 +1,11 @@
 <template>
-	<main @click="handleClick" class="note" :class="{ active: isActive === true }">
+	<main @click="handleClick" class="note" :class="{ activeNote: isActive === true }">
 		<div :class="{ show: isActive }" class="note-toolbar">
-			<div class="button">Save</div>
-			<div class="button">Delete</div>
+			<div class="button">Done</div>
+			<div class="button" @click="deleteNote">Delete</div>
 		</div>
-		<div class="note-title" @keyup="getUserInput" contenteditable="true">{{ note.title }}</div>
-		<div class="note-content" @keyup="getUserInput" contenteditable="true">{{ note.content }}</div>
+		<div class="note-title" @keyup="mapUserInputs" contenteditable="true">{{ note.title }}</div>
+		<div class="note-content" @keyup="mapUserInputs" contenteditable="true">{{ note.content }}</div>
 		<div class="note-date" contenteditable="false">{{ note.date }}</div>
 	</main>
 </template>
@@ -20,159 +20,128 @@ export default {
 	},
 	data() {
 		return {
+			userInputs: {
+				title: null,
+				content: null
+			},
 			modifiedNote: {
-				title: "",
-				content: "",
-				date: new Date().toLocaleString(),
 				id: this.note.id
 			},
-			active: false,
 			gotClicked: false,
-			lastEdit: ""
+			lastEdit: null
 		};
 	},
 	methods: {
 		handleClick() {
-			this.$emit("noteClicked", this.note.id);
-			this.title = "i got clicked";
-			// this.activeNoteId = this.note.id;
-		},
-		getUserInput(e) {
-			let input = e.target.textContent;
-			console.log(e.target.textContent);
-			this.modifiedNote.date = new Date().toLocaleString();
-			if (e.target.classList.contains("note-title")) {
-				this.modifiedNote.title = input;
-			} else if (e.target.classList.contains("note-content")) {
-				this.modifiedNote.content = input;
+			//! notifies parent that note is active due to being clicked
+			if (this.isActive === false) {
+				this.$emit("noteActivated", this.note.id);
 			}
 		},
-		// saveChanges() {
-		// 	this.modifiedNote.title = document.querySelector('.note-title').textContent;
-		// 	this.modifiedNote.content = document.querySelector('.note-content').textContent;
-		// 	this.modifiedNote.date = document.querySelector('.note-date').textContent;
-		// 	const noteUpdates = [this.note.id, this.modifiedNote];
-		// 	this.$emit("updateNote", noteUpdates);
-		// },
-		autoSave() {
-			setInterval(() => {
-				const noteUpdates = [this.note.id, this.modifiedNote];
-				this.$emit("updateNote", noteUpdates);
-				console.log("saved");
-			}, 5000);
+
+		mapUserInputs(e) {
+			//! maps div textcontent as user inputs to a reactive object binding (since vue doesnt support contenteditable)
+			let input = e.target.textContent;
+			console.log(e.target.textContent);
+			if (e.target.classList.contains("note-title")) {
+				this.userInputs.title = input;
+			} else if (e.target.classList.contains("note-content")) {
+				this.userInputs.content = input;
+			}
+		},
+
+		validateAndCommitChanges(userActivity) {
+			//! takes an array of fields that the user made changes to, and adds those properties/values to modified note (avoids updating data that wasnt changed)
+			if (Array.isArray(userActivity) === false) {
+				let paramType = typeof userActivity;
+				console.error(`Expected array, received ${paramType}`);
+				return;
+			}
+			if (userActivity[0] === "none") {
+				return;
+			} else {
+				userActivity.forEach(el => {
+					this.modifiedNote[el] = this.userInputs[el];
+				});
+				this.modifiedNote.date = new Date().toLocaleString();
+			}
+		},
+
+		saveChanges() {
+			const noteUpdates = [this.note.id, this.modifiedNote];
+			this.$emit("updateNote", noteUpdates);
+			console.log("sending changes from note");
+		},
+		deleteNote() {
+			this.$emit("deleteNote", this.note.id);
 		}
 	},
+
 	computed: {
 		isActive() {
 			const status = this.activeNoteId == this.note.id ? true : false;
 			return status;
+		},
+
+		userActivity() {
+			//!whnever an input changes, this outputs array of inputs that changed
+			if (this.userInputs.title === null && this.userInputs.content === null) {
+				return ["none"];
+			} else if (
+				this.userInputs.title === null &&
+				this.userInputs.content !== null
+			) {
+				return ["content"];
+			} else if (
+				this.userInputs.title !== null &&
+				this.userInputs.content === null
+			) {
+				return ["title"];
+			} else {
+				return ["title", "content"];
+			}
 		}
 	},
 	watch: {
-		isActive: function(newVal) {
-			if (newVal === false) {
-				const noteUpdates = [this.note.id, this.modifiedNote];
-				this.$emit("updateNote", noteUpdates);
+		userActivity: function(newVal) {
+			if (newVal[0] !== "none") {
+				this.validateAndCommitChanges(newVal);
+			}
+		},
+		isActive: function(val) {
+			if (val === false) {
+				this.saveChanges();
 			}
 		}
 	},
 	created() {},
-	mounted() {
-		this.modifiedNote = this.note;
-	},
+	mounted() {},
 	updated() {},
 	destroyed() {}
 };
 </script>
 
 <style scoped>
-/* html {
-	font-family: "Helevetica", sans-serif;
-} */
-
-/* body {
-	color: #25252580;
-	font-weight: 400;
-	max-width: 50em;
-	background: rgba(235, 240, 250, 0.5);
-	margin: 0 auto;
-} */
-
-.active {
-	outline: none;
-	color: #363636;
-	margin: 5px 0px;
-	transition: 0.5s;
-	transform: scale(1.05);
-	box-shadow: 0px 3px 0px 2px rgba(71, 71, 71, 0.644);
-}
-/* .collection {
-	display: grid;
-	gap: 10px;
-} */
-/*
-#app {
-	position: relative;
-	height: 100vh;
-	padding: 0px 0px 20px 0px;
-} */
-/*
-.app-header {
-	position: sticky;
-	display: flex;
-	flex-direction: row;
-	justify-content: space-between;
-	padding: 0px 10px 0px 0px;
-	height: 40px;
-	background: white;
-	border-top: 1px solid #00000040;
-	border-bottom: 1px solid #00000040;
-	box-shadow: 0px 3px 10px 1px rgba(100, 100, 100, 0.4);
-} */
-
-.title {
-	padding: 5px 2px 0px 5px;
-	margin: 0px;
-	color: #ffffff;
-	font-weight: 800;
-	font-size: 1.4em;
-	letter-spacing: 2px;
-	background: #36363690;
-	border-right: 1px solid #36363640;
-}
-
-.app-menu {
-	display: flex;
-	flex-direction: row;
-	padding: 0px 5px 5px 5px;
-	margin: 5px;
-}
-
-.app-menu > button {
-	font-size: 1.3em;
-	font-weight: 600;
-}
-
-.page {
-	display: grid;
-	padding: 10px;
-	grid-gap: 15px;
-	overflow: auto;
-	max-height: 100%;
-}
-
 .note {
 	display: grid;
 	grid-gap: 3px;
-	background: white;
-	/*max-height: 426px;*/
+	color: #424242;
 	transition: 0.5s;
-	padding: 5px;
-	box-shadow: 0px 3px 0px 1px rgba(119, 119, 119, 0.5);
-	background: rgba(255, 255, 255, 1);
-	border: 1px solid rgba(100, 100, 100, 0.2);
+	padding: 5px 0px;
+	box-shadow: 0px 2px 0px 2px rgba(121, 121, 121, 0.596);
+	background: rgba(255, 255, 255, 0.513);
+	border: 1px solid rgba(100, 100, 100, 0.335);
+	opacity: 0.9;
 }
-
+.activeNote {
+	outline: none;
+	color: #2e2e2e;
+	margin: 5px 0px;
+	transition: 0.5s;
+	transform: scale(1.05);
+	box-shadow: 0px 3px 0px 2px rgb(100, 100, 100);
+	opacity: 1;
+}
 .note-toolbar {
 	display: flex;
 	flex-direction: row;
@@ -186,24 +155,6 @@ export default {
 	transition: 0.3s ease;
 }
 
-.note-toolbar.show {
-	display: flex;
-	flex-direction: row;
-	justify-content: flex-end;
-	align-content: center;
-	height: 15px;
-	opacity: 0.6;
-
-	/* width: min-content; */
-}
-
-.button {
-	/* display: block; */
-	margin: 0px 5px;
-	padding: 0px 5px;
-	cursor: pointer;
-}
-
 .note-toolbar > button {
 	padding: 5px auto 0px auto;
 	margin: auto 7px;
@@ -214,56 +165,71 @@ export default {
 	text-transform: lowercase;
 }
 
+.note-toolbar.show {
+	display: flex;
+	flex-direction: row;
+	justify-content: flex-end;
+	align-content: center;
+	height: 15px;
+	opacity: 0.6;
+}
+.button {
+	margin: 0px 5px;
+	padding: 0px 5px;
+	cursor: pointer;
+	font-size: 0.9em;
+	letter-spacing: 1px;
+}
+
 .note-date {
 	text-align: right;
-	color: #36363670;
+	color: #363636af;
 	font-weight: 300;
 	padding-top: 3px;
+	padding-right: 5px;
+	font-size: 0.9em;
 }
 
 .note-title {
 	font-size: 28px;
 	padding: 8px 10px;
-	color: rgba(126, 126, 126, 0.8);
+	color: rgba(105, 105, 105, 0.8);
 	outline: none;
 }
 .note-title:hover {
 	font-size: 28px;
-	padding: 8px 15px;
-	color: rgba(109, 109, 109, 0.8);
-	padding-left: 15px;
+	color: rgba(61, 61, 61, 0.8);
 	transition: 0.4s;
 }
 .note-title:focus {
-	color: rgb(109, 109, 109);
+	color: rgb(87, 87, 87);
 	transition: 0.2s;
-}
-.note:focus-within {
-	outline: none;
-	color: #363636;
-	margin: 5px 0px;
-	transition: 0.5s;
-	transform: scale(1.05);
-	box-shadow: 0px 3px 0px 2px rgba(71, 71, 71, 0.644);
 }
 
 .note-content {
 	padding: 10px;
+	margin: auto 5px;
 	padding-top: 10px;
 	min-height: 50px;
 	font-size: 18px;
 	font-weight: 300;
-	color: rgba(150, 150, 150, 1);
+	color: rgb(121, 121, 121);
 	border-top: 1px solid rgba(125, 125, 125, 0.2);
 	transition: 0.4s;
 	overflow: hidden;
 }
-
 .note-content:hover {
 	padding-left: 15px;
 	font-size: 18px;
-
 	border: 1px solid rgba(135, 125, 125, 0.2);
 	color: rgb(83, 83, 83);
+}
+.note:focus-within {
+	/* outline: none;
+	color: #363636;
+	margin: 5px 0px;
+	transition: 0.5s;
+	transform: scale(1.05);
+	box-shadow: 0px 3px 0px 2px rgba(71, 71, 71, 0.644); */
 }
 </style>
