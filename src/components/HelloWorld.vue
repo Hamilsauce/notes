@@ -1,24 +1,33 @@
 <template>
-	<v-container grey-1 @click="blurNote">
+	<v-container
+		grey-1
+		class="white--text"
+		@click="blurNote"
+		style="background: rgba(240, 240, 240, 0.477); padding-left: 10px; padding-right: 10px"
+	>
 		<v-row>
 			<v-col cols="12" class="pt-0 note-column">
 				<!-- <v-img :src="require('../assets/logo.svg')" class="my-3" contain height="200" /> -->
-				<note
-					class="mt-6 mx-1"
-					v-for="note in notes"
-					:key="note.id"
-					:note="note"
-					:activeNoteId="activeNoteId"
-					@noteActivated="checkActiveNote"
-					@updateNote="handleNoteUpdate"
-					@deleteNote="deleteNote"
-				/>
+				<transitionGroup name="list">
+					<note
+						class="mt-6 mx-1 note"
+						v-for="note in notes"
+						:key="note.id"
+						:note="note"
+						:activeNoteId="activeNoteId"
+						@noteActivated="checkActiveNote"
+						@deactivateNote="deactivateNote"
+						@updateNote="handleNoteUpdate"
+						@deleteNote="deleteNote"
+					/>
+				</transitionGroup>
 			</v-col>
 
 			<v-col class="mb-4 text-centered">
-				<h1 class="display-2 font-weight-bold mb-3"></h1>
+				<h1 class="display-2 font-weight-bold mb-3">.</h1>
 
 				<p class="subheading font-weight-regular">
+					.
 					<!-- For help and collaboration with other Vuetify developers,
 					<br />please join our online
 					<a
@@ -29,7 +38,7 @@
 			</v-col>
 
 			<v-col class="mb-5" cols="12">
-				<h2 class="headline font-weight-bold mb-3"></h2>
+				<h2 class="headline font-weight-bold mb-3">.</h2>
 
 				<v-row justify="center">
 					<!-- <a
@@ -44,13 +53,13 @@
 			</v-col>
 
 			<v-col class="mb-5" cols="12">
-				<h2 class="headline font-color white mb-3"></h2>
+				<h2 class="headline font-color white mb-3">.</h2>
 
-				<v-row justify="center"></v-row>
+				<v-row justify="center">.</v-row>
 			</v-col>
 
 			<v-col class="mb-5" cols="12">
-				<h2 class="headline font-weight-bold mb-3"></h2>
+				<h2 class="headline font-weight-bold mb-3">.</h2>
 
 				<v-row justify="center">.</v-row>
 			</v-col>
@@ -126,6 +135,10 @@ export default {
 		checkActiveNote(targetId) {
 			this.activeNoteId = targetId;
 		},
+		deactivateNote() {
+			//* This handles when a user clicks the 'done' button on a note
+			this.activeNoteId = -1;
+		},
 		handleNoteUpdate(data) {
 			this.$emit("updateNote", data);
 		},
@@ -133,6 +146,7 @@ export default {
 			this.$emit("deleteNote", data);
 		},
 		blurNote(e) {
+			//!* This checks to see if a click happened outside of a note, de-activates note if so
 			let noteCheck = e.path.some(el => {
 				try {
 					return el.classList.contains("note") === true;
@@ -148,3 +162,25 @@ export default {
 	}
 };
 </script>
+<style scoped>
+/* .fade-enter-active,
+.fade-leave-active {
+	transition: opacity 0.5s;
+}
+.fade-enter, .fade-leave-to  {
+	opacity: 0;
+} */
+
+/* .list-item {
+  display: inline-block;
+  margin-right: 10px;
+} */
+.list-enter-active,
+.list-leave-active {
+	transition: all 0.3s;
+}
+.list-enter, .list-leave-to /* .list-leave-active below version 2.1.8 */ {
+	opacity: 0;
+	transform: translateX(500px);
+}
+</style>

@@ -14,7 +14,7 @@
 				<v-icon>mdi-magnify</v-icon>
 			</v-btn>
 			<v-btn icon>
-				<v-icon @click="createNote">mdi-heart</v-icon>
+				<v-icon @click="createNote">mdi-note-plus</v-icon>
 			</v-btn>
 			<v-btn icon>
 				<v-icon>mdi-dots-vertical</v-icon>
@@ -49,13 +49,13 @@ export default {
 				{
 					id: 0,
 					title: "note 1",
-					content: "Write a message",
+					content: "Write a note...",
 					date: "4.28.2020"
 				},
 				{
 					id: 1,
 					title: "note 2",
-					content: "Write a message",
+					content: "Write a note...",
 					date: "4.28.2020"
 				}
 			];
@@ -66,7 +66,7 @@ export default {
 		},
 		createNote() {
 			const newNote = {
-				id: this.notes.length,
+				id: this.generateNewId(),
 				title: "Title",
 				content: "Write a note...",
 				date: new Date().toLocaleString()
@@ -75,17 +75,45 @@ export default {
 			localStorage.setItem("storedNotes", JSON.stringify(this.notes));
 		},
 		deleteNote(id) {
-			this.notes.splice(id, 1);
+			const targetIndex = this.notes.findIndex(note => note.id == id);
+			console.log(targetIndex);
+
+			this.notes.splice(targetIndex, 1);
 			localStorage.setItem("storedNotes", JSON.stringify(this.notes));
 		},
 		handleUpdate(data) {
 			let [id, modifiedNote] = data;
-			const targetNote = this.notes[id];
+			const targetNote = this.notes[this.notes.findIndex(note => note.id == id)];
+			console.log(targetNote);
+
 			Object.keys(modifiedNote).forEach(key => {
 				targetNote[key] = modifiedNote[key];
 			});
 
 			localStorage.setItem("storedNotes", JSON.stringify(this.notes));
+		},
+		generateNewId() {
+			this.notes.sort((a, b) => {
+				let first = a.id;
+				let second = b.id;
+				if (first > second) {
+					return 1;
+				} else if (first < second) {
+					return -1;
+				} else if (first == second) {
+					return 0;
+				}
+			});
+			if (this.notes.length === 0) {
+				let newId = 0;
+				return newId;
+			} else {
+				let lastElem = this.notes[this.notes.length - 1];
+				console.log(lastElem);
+
+				let newId = lastElem.id + 1;
+				return newId;
+			}
 		}
 	},
 	created() {
@@ -96,5 +124,13 @@ export default {
 <style scoped>
 * {
 	user-select: none;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+	transition: opacity 0.5s;
+}
+.fade-enter, .fade-leave-to /* .fade-leave-active below version 2.1.8 */ {
+	opacity: 0;
 }
 </style>

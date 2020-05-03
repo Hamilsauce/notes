@@ -1,11 +1,34 @@
 <template>
-	<main @click="handleClick" class="note" :class="{ activeNote: isActive === true }">
-		<div :class="{ show: isActive }" class="note-toolbar">
-			<div class="button">Done</div>
-			<div class="button" @click="deleteNote">Delete</div>
-		</div>
-		<div class="note-title" @keyup="mapUserInputs" contenteditable="true">{{ note.title }}</div>
-		<div class="note-content" @keyup="mapUserInputs" contenteditable="true">{{ note.content }}</div>
+	<main @click="activateNote" class="note" :class="{ activeNote: isActive === true }">
+		<section :class="{ show: isActive }" class="note-toolbar">
+			<div class="toolbar-left">
+				<div class="button" @click="pinNote">
+					<v-icon color="rgba(50,50,50,0.5)">mdi-pin</v-icon>
+				</div>
+			</div>
+			<div class="toolbar-right">
+				<div class="button" @click="deactivateNote">
+					<v-icon color="rgba(50,50,50,0.5)">mdi-check-bold</v-icon>
+				</div>
+
+				<div class="button" @click="deleteNote">
+					<v-icon color="rgba(50,50,50,0.5)">mdi-delete</v-icon>
+				</div>
+			</div>
+		</section>
+		<div
+			class="note-title"
+			@click="selectText"
+			@dblclick="deselectText"
+			@keyup="mapUserInputs"
+			contenteditable="true"
+		>{{ note.title }}</div>
+		<div
+			class="note-content"
+			@click="selectNoteContent"
+			@keyup="mapUserInputs"
+			contenteditable="true"
+		>{{ note.content }}</div>
 		<div class="note-date" contenteditable="false">{{ note.date }}</div>
 	</main>
 </template>
@@ -24,19 +47,23 @@ export default {
 				title: null,
 				content: null
 			},
-			modifiedNote: {
-				id: this.note.id
-			},
+			modifiedNote: {},
 			gotClicked: false,
 			lastEdit: null
 		};
 	},
 	methods: {
-		handleClick() {
+		activateNote() {
 			//! notifies parent that note is active due to being clicked
 			if (this.isActive === false) {
 				this.$emit("noteActivated", this.note.id);
 			}
+		},
+		deactivateNote() {
+			//! notifies parent that note is active due to being clicked
+			setTimeout(() => {
+				this.$emit("deactivateNote", this.note.id);
+			}, 100);
 		},
 
 		mapUserInputs(e) {
@@ -68,12 +95,60 @@ export default {
 		},
 
 		saveChanges() {
-			const noteUpdates = [this.note.id, this.modifiedNote];
-			this.$emit("updateNote", noteUpdates);
-			console.log("sending changes from note");
+			if (Object.keys(this.modifiedNote).length > 0) {
+				const noteUpdates = [this.note.id, this.modifiedNote];
+				this.$emit("updateNote", noteUpdates);
+				console.log("sending changes from note");
+
+				for (const key in this.modifiedNote) {
+					delete this.modifiedNote[key];
+					this.userInputs[key] = null;
+				}
+				return;
+			} else {
+				console.log("no updates made, nothing sent");
+				return;
+			}
 		},
 		deleteNote() {
 			this.$emit("deleteNote", this.note.id);
+		},
+		pinNote() {},
+		selectText(e) {
+			let wSelection = window.getSelection();
+			if (wSelection.toString().length > 0) {
+				this.deselectText();
+			} else {
+				let el = e.target;
+				if (document.body.createTextRange) {
+					let range = document.body.createTextRange();
+					range.moveToElementText(el);
+					range.select();
+				} else if (window.getSelection) {
+					let selection = window.getSelection();
+					let range = document.createRange();
+					range.selectNodeContents(el);
+					selection.removeAllRanges();
+					selection.addRange(range);
+				}
+			}
+		},
+		deselectText() {
+			// let el = e.target;
+			let wSelection = window.getSelection();
+			// wSelection.removeAllRanges();
+			wSelection.collapseToEnd();
+		},
+
+		selectNoteContent(e) {
+			const el = e.target;
+			console.log(el);
+
+			if (el.textContent === "Write a note...") {
+				console.log(el.textContent);
+
+				el.textContent = "";
+			}
 		}
 	},
 
@@ -127,16 +202,18 @@ export default {
 	grid-gap: 3px;
 	color: #424242;
 	transition: 0.5s;
-	padding: 5px 0px;
+	padding: 5px 0px 0px 0px;
 	box-shadow: 0px 2px 0px 2px rgba(121, 121, 121, 0.596);
-	background: rgba(255, 255, 255, 0.513);
-	border: 1px solid rgba(100, 100, 100, 0.335);
+	background: rgba(255, 255, 255, 0.897);
+	border: 1px solid rgba(100, 100, 100, 0.637);
 	opacity: 0.9;
 }
 .activeNote {
 	outline: none;
 	color: #2e2e2e;
-	margin: 5px 0px;
+
+	margin: 5px auto;
+	padding-bottom: 0px;
 	transition: 0.5s;
 	transform: scale(1.05);
 	box-shadow: 0px 3px 0px 2px rgb(100, 100, 100);
@@ -152,7 +229,7 @@ export default {
 	height: 0px;
 	opacity: 0;
 	overflow: hidden;
-	transition: 0.3s ease;
+	transition: 0.2s;
 }
 
 .note-toolbar > button {
@@ -160,9 +237,10 @@ export default {
 	margin: auto 7px;
 	color: #b4b4b480;
 	font-weight: 300;
-	font-size: 0.5em;
+	font-size: 0.7em;
 	letter-spacing: 2px;
 	text-transform: lowercase;
+	z-index: 2;
 }
 
 .note-toolbar.show {
@@ -170,30 +248,58 @@ export default {
 	flex-direction: row;
 	justify-content: flex-end;
 	align-content: center;
-	height: 15px;
-	opacity: 0.6;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	height: 20px;
+	opacity: 0.9;
+}
+.toolbar-left {
+	display: flex;
+	flex-direction: row;
+	justify-content: flex-start;
+	width: 100%;
+	height: fit-content;
+	padding: 0px 3px;
+	margin: 0;
+}
+.toolbar-right {
+	display: flex;
+	flex-direction: row;
+	justify-content: flex-end;
+	width: 100%;
+	height: fit-content;
+	padding: 0px 3px;
+	margin: 0;
 }
 .button {
 	margin: 0px 5px;
-	padding: 0px 5px;
+	padding: 0px 3px;
 	cursor: pointer;
 	font-size: 0.9em;
 	letter-spacing: 1px;
 }
-
+v-icon:hover {
+	color: rgba(40, 40, 40, 0.6);
+}
+.doneButtonActive {
+	color: rgb(0, 0, 0);
+}
 .note-date {
 	text-align: right;
 	color: #363636af;
 	font-weight: 300;
 	padding-top: 3px;
 	padding-right: 5px;
-	font-size: 0.9em;
+	font-size: 0.8em;
 }
 
 .note-title {
+	background: white;
+	display: block;
 	font-size: 28px;
 	padding: 8px 10px;
 	color: rgba(105, 105, 105, 0.8);
+	caret-color: rgb(90, 90, 90);
 	outline: none;
 }
 .note-title:hover {
@@ -207,6 +313,7 @@ export default {
 }
 
 .note-content {
+	caret-color: rgb(90, 90, 90);
 	padding: 10px;
 	margin: auto 5px;
 	padding-top: 10px;
@@ -231,5 +338,10 @@ export default {
 	transition: 0.5s;
 	transform: scale(1.05);
 	box-shadow: 0px 3px 0px 2px rgba(71, 71, 71, 0.644); */
+}
+
+.doneButtonActive {
+	color: rgb(0, 0, 0);
+	opacity: 1;
 }
 </style>
