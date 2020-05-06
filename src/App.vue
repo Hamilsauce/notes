@@ -1,14 +1,13 @@
 <template>
 	<v-app>
 		<!-- <header class="app-header"> -->
-		<v-toolbar dense>
+		<v-toolbar dense style="position: sticky; top: 0px; left: 0px; z-index: 5;">
 			<v-app-bar-nav-icon></v-app-bar-nav-icon>
-			<v-toolbar-title>
-				<span class="title ml-0 mr-5">
-					note
-					<span class="font-weight-light grey darken-2 py-2 px-1 white--text">guy</span>
-				</span>
-			</v-toolbar-title>
+			<span class="title ml-0 mr-5">
+				note
+				<span class="font-weight-light grey darken-2 py-1 px-1 white--text">guy</span>
+			</span>
+			<v-toolbar-title></v-toolbar-title>
 			<v-spacer></v-spacer>
 			<v-btn icon>
 				<v-icon>mdi-magnify</v-icon>
@@ -45,7 +44,7 @@ export default {
 	methods: {
 		initializeNotes() {
 			console.log(this.text);
-			this.notes = JSON.parse(localStorage.getItem("storedNotes")) || [
+			this.notes = this.getfromLocalStorage("storedNotes") || [
 				{
 					id: 0,
 					title: "note 1",
@@ -73,6 +72,7 @@ export default {
 			};
 			this.notes.push(newNote);
 			localStorage.setItem("storedNotes", JSON.stringify(this.notes));
+			this.sendToLocalStorage("storedNotes", this.notes);
 		},
 		deleteNote(id) {
 			const targetIndex = this.notes.findIndex(note => note.id == id);
@@ -80,6 +80,7 @@ export default {
 
 			this.notes.splice(targetIndex, 1);
 			localStorage.setItem("storedNotes", JSON.stringify(this.notes));
+			this.sendToLocalStorage("storedNotes", this.notes);
 		},
 		handleUpdate(data) {
 			let [id, modifiedNote] = data;
@@ -90,7 +91,7 @@ export default {
 				targetNote[key] = modifiedNote[key];
 			});
 
-			localStorage.setItem("storedNotes", JSON.stringify(this.notes));
+			this.sendToLocalStorage("storedNotes", this.notes);
 		},
 		generateNewId() {
 			this.notes.sort((a, b) => {
@@ -114,6 +115,14 @@ export default {
 				let newId = lastElem.id + 1;
 				return newId;
 			}
+		},
+		sendToLocalStorage(key, data) {
+			// localStorage.setItem(key, data);
+			localStorage.setItem(key, JSON.stringify(data));
+		},
+		getfromLocalStorage(key) {
+			// localStorage.getItem(key);
+			return JSON.parse(localStorage.getItem(key));
 		}
 	},
 	created() {
@@ -121,9 +130,10 @@ export default {
 	}
 };
 </script>
-<style scoped>
+<style>
 * {
 	user-select: none;
+	touch-action: manipulation;
 }
 
 .fade-enter-active,
@@ -132,5 +142,11 @@ export default {
 }
 .fade-enter, .fade-leave-to /* .fade-leave-active below version 2.1.8 */ {
 	opacity: 0;
+}
+
+v-toolbar {
+	padding: sticky;
+	top: 0px;
+	left: 0px;
 }
 </style>

@@ -2,18 +2,18 @@
 	<main @click="activateNote" class="note" :class="{ activeNote: isActive === true }">
 		<section :class="{ show: isActive }" class="note-toolbar">
 			<div class="toolbar-left">
-				<div class="button" @click="pinNote">
-					<v-icon color="rgba(50,50,50,0.5)">mdi-pin</v-icon>
-				</div>
+				<v-btn color="rgba(100, 100, 100, 0.8)" text icon @click="pinNote">
+					<v-icon>mdi-pin</v-icon>
+				</v-btn>
 			</div>
 			<div class="toolbar-right">
-				<div class="button" @click="deactivateNote">
-					<v-icon color="rgba(50,50,50,0.5)">mdi-check-bold</v-icon>
-				</div>
+				<v-btn color="rgba(53, 116, 28, 0.8)" text icon @click="deactivateNote">
+					<v-icon>mdi-check-bold</v-icon>
+				</v-btn>
 
-				<div class="button" @click="deleteNote">
-					<v-icon color="rgba(50,50,50,0.5)">mdi-delete</v-icon>
-				</div>
+				<v-btn color="rgba(150, 60, 15, 0.8)" text icon @click="deleteNote">
+					<v-icon class="button deleteButton" @click="deleteNote">mdi-delete</v-icon>
+				</v-btn>
 			</div>
 		</section>
 		<div
@@ -23,12 +23,22 @@
 			@keyup="mapUserInputs"
 			contenteditable="true"
 		>{{ note.title }}</div>
-		<div
-			class="note-content"
-			@click="selectNoteContent"
-			@keyup="mapUserInputs"
-			contenteditable="true"
-		>{{ note.content }}</div>
+		<div class="content-box-container">
+			<div class="content-toolbar">
+				<v-btn color="rgba(100, 100, 100, 0.8)" x-small text icon right @click="toggleContentCollapse">
+					<v-icon v-if="contentCollapsed === false">mdi-arrow-collapse</v-icon>
+					<v-icon v-if="contentCollapsed === true">mdi-arrow-expand</v-icon>
+				</v-btn>
+			</div>
+			<div
+				ref="content"
+				:class="{ contentCollapsed: contentCollapsed === true }"
+				class="note-content"
+				@click="selectNoteContent"
+				@keyup="mapUserInputs"
+				contenteditable="true"
+			></div>
+		</div>
 		<div class="note-date" contenteditable="false">{{ note.date }}</div>
 	</main>
 </template>
@@ -49,6 +59,7 @@ export default {
 			},
 			modifiedNote: {},
 			gotClicked: false,
+			contentCollapsed: false,
 			lastEdit: null
 		};
 	},
@@ -68,8 +79,8 @@ export default {
 
 		mapUserInputs(e) {
 			//! maps div textcontent as user inputs to a reactive object binding (since vue doesnt support contenteditable)
-			let input = e.target.textContent;
-			console.log(e.target.textContent);
+			let input = e.target.innerHTML;
+			console.log(e.target.innerHTML);
 			if (e.target.classList.contains("note-title")) {
 				this.userInputs.title = input;
 			} else if (e.target.classList.contains("note-content")) {
@@ -112,6 +123,10 @@ export default {
 		},
 		deleteNote() {
 			this.$emit("deleteNote", this.note.id);
+		},
+		toggleContentCollapse(e) {
+			e.stopPropagation();
+			this.contentCollapsed = !this.contentCollapsed;
 		},
 		pinNote() {},
 		selectText(e) {
@@ -189,7 +204,12 @@ export default {
 			}
 		}
 	},
-	created() {},
+	created() {
+		setTimeout(() => {
+			console.log(this.$refs);
+			this.$refs.content.innerHTML = this.note.content;
+		}, 2000);
+	},
 	mounted() {},
 	updated() {},
 	destroyed() {}
@@ -297,15 +317,17 @@ v-icon:hover {
 	background: white;
 	display: block;
 	font-size: 28px;
-	padding: 8px 10px;
+	padding: 4px 10px;
 	color: rgba(105, 105, 105, 0.8);
 	caret-color: rgb(90, 90, 90);
 	outline: none;
+	transition: 0.4s ease-in-out;
 }
 .note-title:hover {
 	font-size: 28px;
 	color: rgba(61, 61, 61, 0.8);
-	transition: 0.4s;
+	transition: 0.4s ease-in-out;
+	padding-left: 15px;
 }
 .note-title:focus {
 	color: rgb(87, 87, 87);
@@ -314,22 +336,33 @@ v-icon:hover {
 
 .note-content {
 	caret-color: rgb(90, 90, 90);
-	padding: 10px;
-	margin: auto 5px;
-	padding-top: 10px;
-	min-height: 50px;
-	font-size: 18px;
+	padding: 0px 10px 5px 10px;
+	margin: 0 5px auto 5px;
+	/* padding-top: 10px; */
+	height: 100%;
+	font-size: 14px;
 	font-weight: 300;
-	color: rgb(121, 121, 121);
-	border-top: 1px solid rgba(125, 125, 125, 0.2);
+	color: rgb(77, 77, 77);
 	transition: 0.4s;
 	overflow: hidden;
+	border: 1px solid rgba(255, 255, 255, 0);
+	transition: 0.3s ease-in-out;
 }
 .note-content:hover {
-	padding-left: 15px;
-	font-size: 18px;
+	/* padding-left: 5px; */
 	border: 1px solid rgba(135, 125, 125, 0.2);
 	color: rgb(83, 83, 83);
+}
+.contentCollapsed {
+	height: 25px;
+	transition: 0.3s ease-in-out;
+}
+.content-toolbar {
+	display: flex;
+	justify-content: flex-end;
+	padding: 3px 10px;
+	margin: 0 10px;
+	border-top: 1px solid rgba(125, 125, 125, 0.2);
 }
 .note:focus-within {
 	/* outline: none;
@@ -341,7 +374,7 @@ v-icon:hover {
 }
 
 .doneButtonActive {
-	color: rgb(0, 0, 0);
+	color: rgb(53, 116, 28);
 	opacity: 1;
 }
 </style>
