@@ -3,7 +3,7 @@
 		<section :class="{ show: isActive }" class="note-toolbar">
 			<div class="toolbar-left">
 				<v-btn color="rgba(100, 100, 100, 0.8)" text icon @click="pinNote">
-					<v-icon>mdi-pin</v-icon>
+					<v-icon alt="pin note">mdi-pin</v-icon>
 				</v-btn>
 			</div>
 			<div class="toolbar-right">
@@ -24,15 +24,23 @@
 			contenteditable="true"
 		>{{ note.title }}</div>
 		<div class="content-box-container">
-			<div class="content-toolbar">
+			<div class="content-toolbar" :class="{ hideNoteToolbar: isActive === false }">
 				<v-btn color="rgba(100, 100, 100, 0.8)" x-small text icon right @click="toggleContentCollapse">
-					<v-icon v-if="contentCollapsed === false">mdi-arrow-collapse</v-icon>
-					<v-icon v-if="contentCollapsed === true">mdi-arrow-expand</v-icon>
+					<v-icon
+						class="expandArrow"
+						:class="{ expandArrowLarge: isActive === false }"
+						v-if="contentCollapsed === false"
+					>mdi-arrow-collapse</v-icon>
+					<v-icon
+						class="expandArrow"
+						:class="{ expandArrowLarge: isActive === false }"
+						v-if="contentCollapsed === true"
+					>mdi-arrow-expand</v-icon>
 				</v-btn>
 			</div>
 			<div
 				ref="content"
-				:class="{ contentCollapsed: contentCollapsed === true }"
+				:class="{ contentCollapsed: contentCollapsed === false }"
 				class="note-content"
 				@click="selectNoteContent"
 				@keyup="mapUserInputs"
@@ -53,6 +61,7 @@ export default {
 	},
 	data() {
 		return {
+			contentElement: this.$refs.content,
 			userInputs: {
 				title: null,
 				content: null
@@ -71,7 +80,7 @@ export default {
 			}
 		},
 		deactivateNote() {
-			//! notifies parent that note is active due to being clicked
+			//! notifies parent that note is noactive due to being clicked
 			setTimeout(() => {
 				this.$emit("deactivateNote", this.note.id);
 			}, 100);
@@ -124,10 +133,6 @@ export default {
 		deleteNote() {
 			this.$emit("deleteNote", this.note.id);
 		},
-		toggleContentCollapse(e) {
-			e.stopPropagation();
-			this.contentCollapsed = !this.contentCollapsed;
-		},
 		pinNote() {},
 		selectText(e) {
 			let wSelection = window.getSelection();
@@ -149,22 +154,44 @@ export default {
 			}
 		},
 		deselectText() {
-			// let el = e.target;
 			let wSelection = window.getSelection();
-			// wSelection.removeAllRanges();
 			wSelection.collapseToEnd();
 		},
-
 		selectNoteContent(e) {
 			const el = e.target;
-			console.log(el);
-
 			if (el.textContent === "Write a note...") {
-				console.log(el.textContent);
-
 				el.textContent = "";
 			}
-		}
+		},
+		toggleContentCollapse() {
+			this.contentCollapsed = !this.contentCollapsed;
+			if (this.contentCollapsed === true) {
+				let newHeight = this.$refs.content.scrollHeight;
+				console.log(this.$refs.content);
+				console.log(newHeight);
+
+				this.$refs.content.style.height = newHeight + "px";
+				const transitionHandle = () => {
+					this.$refs.content.removeEventListener("transitioned", transitionHandle);
+					this.$refs.content.style.height = null;
+				};
+				this.$refs.content.addEventListener("transitioned", transitionHandle);
+			} else {
+				let sectionHeight = this.$refs.content.scrollHeight;
+				let elTransition = this.$refs.content.style.transition;
+				this.$refs.content.style.transition = "";
+				requestAnimationFrame(() => {
+					this.$refs.content.style.height = sectionHeight + "px";
+					this.$refs.content.style.transition = elTransition;
+					requestAnimationFrame(() => {
+						// on the next frame (as soon as the previous style change has taken effect),        have the el transition to height: 0
+
+						this.$refs.content.style.height = 0 + "px";
+					});
+				});
+			}
+		},
+		collapseNoteContent() {}
 	},
 
 	computed: {
@@ -217,6 +244,9 @@ export default {
 </script>
 
 <style scoped>
+* {
+	user-select: text;
+}
 .note {
 	display: grid;
 	grid-gap: 3px;
@@ -226,7 +256,8 @@ export default {
 	box-shadow: 0px 2px 0px 2px rgba(121, 121, 121, 0.596);
 	background: rgba(255, 255, 255, 0.897);
 	border: 1px solid rgba(100, 100, 100, 0.637);
-	opacity: 0.9;
+	height: auto;
+	opacity: 0.8;
 }
 .activeNote {
 	outline: none;
@@ -235,7 +266,7 @@ export default {
 	margin: 5px auto;
 	padding-bottom: 0px;
 	transition: 0.5s;
-	transform: scale(1.05);
+	transform: scale(1.02, 1.03);
 	box-shadow: 0px 3px 0px 2px rgb(100, 100, 100);
 	opacity: 1;
 }
@@ -246,7 +277,10 @@ export default {
 	justify-items: center;
 	align-items: center;
 	width: 100%;
+	margin: 3px auto;
+	padding: 0 15px;
 	height: 0px;
+
 	opacity: 0;
 	overflow: hidden;
 	transition: 0.2s;
@@ -255,7 +289,7 @@ export default {
 .note-toolbar > button {
 	padding: 5px auto 0px auto;
 	margin: auto 7px;
-	color: #b4b4b480;
+	color: #a4a6b680;
 	font-weight: 300;
 	font-size: 0.7em;
 	letter-spacing: 2px;
@@ -317,52 +351,85 @@ v-icon:hover {
 	background: white;
 	display: block;
 	font-size: 28px;
-	padding: 4px 10px;
-	color: rgba(105, 105, 105, 0.8);
+	padding: 0px 10px;
+	margin: 0 20px;
+	color: rgba(41, 41, 41, 0.8);
 	caret-color: rgb(90, 90, 90);
 	outline: none;
 	transition: 0.4s ease-in-out;
 }
 .note-title:hover {
 	font-size: 28px;
-	color: rgba(61, 61, 61, 0.8);
-	transition: 0.4s ease-in-out;
-	padding-left: 15px;
+	color: rgba(41, 41, 41, 0.8);
+	/* padding-left: 15px; */
 }
 .note-title:focus {
-	color: rgb(87, 87, 87);
+	color: rgb(49, 49, 49);
+	/* border-bottom: 1px solid rgba(207, 207, 207, 0.829); */
 	transition: 0.2s;
 }
-
+.content-box-container {
+	background: rgb(255, 255, 255);
+	padding: 0px 15px;
+	margin: auto;
+	width: 100%;
+	/* max-width: 700px; */
+}
 .note-content {
 	caret-color: rgb(90, 90, 90);
 	padding: 0px 10px 5px 10px;
-	margin: 0 5px auto 5px;
+	margin: 0 auto auto auto;
+	outline: none;
 	/* padding-top: 10px; */
-	height: 100%;
+	/* height: 100%; */
+	height: auto;
+	min-height: 70px;
+	width: 96%;
 	font-size: 14px;
 	font-weight: 300;
 	color: rgb(77, 77, 77);
 	transition: 0.4s;
-	overflow: hidden;
-	border: 1px solid rgba(255, 255, 255, 0);
-	transition: 0.3s ease-in-out;
+	overflow-y: auto;
+	border: 1px solid rgb(238, 238, 238);
+	border-top: 1px solid rgba(255, 255, 255, 0);
+	overflow-x: hidden;
+	border-bottom: 2px groove rgba(228, 222, 213, 0.479);
+	transition: 0.5s ease-in;
 }
 .note-content:hover {
 	/* padding-left: 5px; */
-	border: 1px solid rgba(135, 125, 125, 0.2);
+	/* border: 1px solid rgba(135, 125, 125, 0.2);s */
+	border: 1px solid rgb(177, 177, 177);
+	border-top: 1px solid rgba(255, 255, 255, 0);
+	transition: 0.4s;
 	color: rgb(83, 83, 83);
 }
 .contentCollapsed {
-	height: 25px;
-	transition: 0.3s ease-in-out;
+	height: 45px;
+	overflow: hidden;
+	transition: 1s ease-in-out;
+	opacity: 0.9;
+	border-bottom: 2px groove rgba(255, 255, 255, 0.068);
 }
 .content-toolbar {
 	display: flex;
 	justify-content: flex-end;
 	padding: 3px 10px;
-	margin: 0 10px;
+	margin: 0 16px;
 	border-top: 1px solid rgba(125, 125, 125, 0.2);
+	border-bottom: 1px ridge rgb(222, 224, 228);
+	transition: 0.5s ease;
+	background: #f3f1f0;
+}
+.hideNoteToolbar {
+	background: rgba(255, 255, 255, 0.198);
+	border-bottom: 1px ridge rgba(255, 255, 255, 0);
+	/* transform: translateZ(10px); */
+	transition: 0.5s ease;
+}
+.expandArrowLarge {
+	transition: 0.5s ease;
+	transform: scale(1.3);
 }
 .note:focus-within {
 	/* outline: none;
@@ -376,5 +443,11 @@ v-icon:hover {
 .doneButtonActive {
 	color: rgb(53, 116, 28);
 	opacity: 1;
+}
+
+@media screen and (max-width: 450px) {
+	.content-toolbar {
+		margin: auto 5px;
+	}
 }
 </style>

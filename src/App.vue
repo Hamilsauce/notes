@@ -132,7 +132,7 @@ export default {
 </script>
 <style>
 * {
-	user-select: none;
+
 	touch-action: manipulation;
 }
 
